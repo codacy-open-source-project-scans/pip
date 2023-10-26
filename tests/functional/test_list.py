@@ -5,9 +5,9 @@ from pathlib import Path
 import pytest
 
 from pip._internal.models.direct_url import DirectUrl, DirInfo
-from tests.conftest import ScriptFactory
 from tests.lib import (
     PipTestEnvironment,
+    ScriptFactory,
     TestData,
     _create_test_package,
     create_test_package_with_setup,
@@ -595,8 +595,7 @@ def test_outdated_formats(script: PipTestEnvironment, data: TestData) -> None:
         "--outdated",
         "--format=json",
     )
-    data = json.loads(result.stdout)
-    assert data == [
+    assert json.loads(result.stdout) == [
         {
             "name": "simple",
             "version": "1.0",

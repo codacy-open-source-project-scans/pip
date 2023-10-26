@@ -39,6 +39,15 @@ def _get_statefile_name(key: str) -> str:
     return name
 
 
+def _convert_date(isodate: str) -> datetime.datetime:
+    """Convert an ISO format string to a date.
+
+    Handles the format 2020-01-22T14:24:01Z (trailing Z)
+    which is not supported by older versions of fromisoformat.
+    """
+    return datetime.datetime.fromisoformat(isodate.replace("Z", "+00:00"))
+
+
 class SelfCheckState:
     def __init__(self, cache_dir: str) -> None:
         self._state: Dict[str, Any] = {}
@@ -73,7 +82,7 @@ class SelfCheckState:
             return None
 
         # Determine if we need to refresh the state
-        last_check = datetime.datetime.fromisoformat(self._state["last_check"])
+        last_check = _convert_date(self._state["last_check"])
         time_since_last_check = current_time - last_check
         if time_since_last_check > _WEEK:
             return None
@@ -233,7 +242,7 @@ def pip_self_version_check(session: PipSession, options: optparse.Values) -> Non
             ),
         )
         if upgrade_prompt is not None:
-            logger.warning("[present-rich] %s", upgrade_prompt)
+            logger.warning("%s", upgrade_prompt, extra={"rich": True})
     except Exception:
         logger.warning("There was an error checking the latest version of pip.")
         logger.debug("See below for error", exc_info=True)
