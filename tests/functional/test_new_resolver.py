@@ -2295,7 +2295,7 @@ def test_new_resolver_dont_backtrack_on_extra_if_base_constrained_in_requirement
         script, "pkg", "2.0", extras={"ext1": ["dep"], "ext2": ["dep"]}
     )
 
-    to_install: tuple[str, str] = (
+    to_install: Tuple[str, str] = (
         "pkg[ext1]",
         "pkg[ext2]==1.0" if two_extras else "pkg==1.0",
     )
@@ -2342,7 +2342,7 @@ def test_new_resolver_dont_backtrack_on_conflicting_constraints_on_extras(
         script, "pkg", "2.0", extras={"ext1": ["dep"], "ext2": ["dep"]}
     )
 
-    to_install: tuple[str, str] = (
+    to_install: Tuple[str, str] = (
         "pkg[ext1]>1",
         "pkg[ext2]==1.0" if two_extras else "pkg==1.0",
     )
@@ -2406,6 +2406,51 @@ def test_new_resolver_respect_user_requested_if_extra_is_installed(
     script.assert_installed(pkg3="1.0", pkg2="2.0", pkg1="1.0")
 
 
+def test_new_resolver_constraint_on_link_with_extra(
+    script: PipTestEnvironment,
+) -> None:
+    """
+    Verify that installing works from a link with both an extra and a constraint.
+    """
+    wheel: pathlib.Path = create_basic_wheel_for_package(
+        script, "pkg", "1.0", extras={"ext": []}
+    )
+
+    script.pip(
+        "install",
+        "--no-cache-dir",
+        # no index, no --find-links: only the explicit path
+        "--no-index",
+        f"{wheel}[ext]",
+        "pkg==1",
+    )
+    script.assert_installed(pkg="1.0")
+
+
+def test_new_resolver_constraint_on_link_with_extra_indirect(
+    script: PipTestEnvironment,
+) -> None:
+    """
+    Verify that installing works from a link with an extra if there is an indirect
+    dependency on that same package with the same extra (#12372).
+    """
+    wheel_one: pathlib.Path = create_basic_wheel_for_package(
+        script, "pkg1", "1.0", extras={"ext": []}
+    )
+    wheel_two: pathlib.Path = create_basic_wheel_for_package(
+        script, "pkg2", "1.0", depends=["pkg1[ext]==1.0"]
+    )
+
+    script.pip(
+        "install",
+        "--no-cache-dir",
+        # no index, no --find-links: only the explicit path
+        wheel_two,
+        f"{wheel_one}[ext]",
+    )
+    script.assert_installed(pkg1="1.0", pkg2="1.0")
+
+
 def test_new_resolver_do_not_backtrack_on_build_failure(
     script: PipTestEnvironment,
 ) -> None:
@@ -2461,7 +2506,7 @@ def test_new_resolver_comes_from_with_extra(
     create_basic_wheel_for_package(script, "dep", "1.0")
     create_basic_wheel_for_package(script, "pkg", "1.0", extras={"ext": ["dep"]})
 
-    to_install: tuple[str, str] = ("pkg", "pkg[ext]")
+    to_install: Tuple[str, str] = ("pkg", "pkg[ext]")
 
     result = script.pip(
         "install",
